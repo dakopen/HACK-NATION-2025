@@ -1,0 +1,329 @@
+/* Layout */
+.container {
+    margin: 0 auto;
+    padding: 24px;
+    max-width: 1200px;
+}
+.container.full {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 16px;
+}
+.app-header.glass {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    background: rgba(20, 20, 30, 0.55);
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.app-header .left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brand {
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.links a {
+    margin-left: 16px;
+    opacity: 0.85;
+}
+.ghost.back {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.stepper {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    list-style: none;
+    padding: 0;
+    margin: 18px 0 24px;
+}
+.stepper li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    font-size: 14px;
+}
+.stepper li.step-item {
+    cursor: pointer;
+}
+.stepper li .index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 12px;
+}
+.stepper li[data-status="done"] {
+    opacity: 0.65;
+}
+.stepper li[data-status="current"] {
+    border-color: #646cff;
+}
+
+.panel {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 18px;
+}
+.panel.center {
+    text-align: center;
+}
+
+.trend-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+@media (min-width: 1200px) {
+    .trend-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+.trend-card {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 0;
+    border-radius: 12px;
+}
+.trend-card .thumb-wrap {
+    aspect-ratio: 9/16;
+    width: 100%;
+    overflow: hidden;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+.trend-card .trend-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.trend-card .trend-title,
+.trend-card .trend-desc,
+.trend-card .hashtags {
+    padding: 8px 12px;
+}
+
+/* Slightly smaller visual size via scale and tighter paddings */
+.trend-card .thumb-wrap {
+    transform: scale(0.96);
+    transform-origin: top center;
+}
+.trend-card .trend-title,
+.trend-card .trend-desc,
+.trend-card .hashtags {
+    padding: 6px 10px;
+}
+.trend-card.selected {
+    border-color: #646cff;
+    box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2);
+}
+.trend-title {
+    font-weight: 700;
+}
+.trend-desc {
+    font-size: 13px;
+    opacity: 0.85;
+    margin: 6px 0 8px;
+}
+.hashtags {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.context-box {
+    margin-top: 16px;
+    display: grid;
+    gap: 6px;
+}
+.context-box textarea {
+    resize: vertical;
+}
+
+/* Inputs */
+/* Style all text-like inputs but exclude checkboxes/radios */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+.input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    color: inherit;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 10px 12px;
+    outline: none;
+    transition: box-shadow 0.15s ease, border-color 0.2s ease;
+    box-sizing: border-box;
+}
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus {
+    border-color: #7a82ff;
+    box-shadow: 0 0 0 4px rgba(122, 130, 255, 0.15);
+}
+label {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* Prevent long text overflow in previews and cards */
+.caption-box .value,
+.trend-desc,
+.hashtags {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Better textarea sizing */
+textarea {
+    min-height: 56px;
+    max-height: 260px;
+    overflow: auto;
+    line-height: 1.35;
+}
+
+.actions {
+    margin-top: 16px;
+    display: flex;
+    gap: 10px;
+}
+.actions .primary {
+    background: #646cff;
+}
+
+.spinner {
+    width: 44px;
+    height: 44px;
+    border-radius: 999px;
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #646cff;
+    margin: 8px auto 12px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.progress {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    height: 10px;
+    margin: 12px auto;
+    max-width: 520px;
+}
+.progress .bar {
+    height: 100%;
+    background: #646cff;
+    width: 0;
+}
+
+.muted {
+    opacity: 0.75;
+    font-size: 14px;
+}
+
+.review {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    align-items: flex-start;
+    gap: 16px;
+}
+.review .meta {
+    display: grid;
+    gap: 8px;
+}
+
+.publish {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 16px;
+}
+.platforms label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 8px 0;
+}
+.preview .caption-box {
+    background: rgba(255, 255, 255, 0.04);
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+.caption-box .label {
+    font-size: 12px;
+    opacity: 0.7;
+}
+.caption-box .value {
+    font-size: 14px;
+}
+
+.upload-status {
+    margin-top: 14px;
+}
+.upload-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    margin-top: 8px;
+}
+.upload-row[data-status="done"] {
+    border-color: #2ecc71;
+}
+.upload-row .platform {
+    text-transform: capitalize;
+}
+
+.app-footer {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 13px;
+    opacity: 0.7;
+}
+
+@media (max-width: 820px) {
+    .trend-grid {
+        grid-template-columns: 1fr;
+    }
+    .review {
+        grid-template-columns: 1fr;
+    }
+    .publish {
+        grid-template-columns: 1fr;
+    }
+    .stepper {
+        grid-template-columns: 1fr 1fr;
+    }
+}
