@@ -114,7 +114,7 @@
     border-radius: 12px;
 }
 .trend-card .thumb-wrap {
-    aspect-ratio: 9/16;
+    aspect-ratio: 9/14;
     width: 100%;
     overflow: hidden;
     border-top-left-radius: 12px;
@@ -134,7 +134,7 @@
 
 /* Slightly smaller visual size via scale and tighter paddings */
 .trend-card .thumb-wrap {
-    transform: scale(0.96);
+    transform: scale(1);
     transform-origin: top center;
 }
 .trend-card .trend-title,
@@ -166,6 +166,49 @@
 }
 .context-box textarea {
     resize: vertical;
+}
+
+/* Brand selection */
+.brand-select {
+    margin-top: 16px;
+}
+.brand-select h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    opacity: 0.9;
+}
+.brand-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+@media (max-width: 820px) {
+    .brand-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+.brand-card {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+}
+.brand-card.selected {
+    border-color: #646cff;
+    box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2);
+}
+.brand-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+.brand-name {
+    font-size: 13px;
+    opacity: 0.95;
 }
 
 /* Inputs */
