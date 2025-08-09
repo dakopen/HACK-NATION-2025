@@ -183,6 +183,10 @@ function ChooseStep({
     onGenerate: () => void;
 }) {
     // Pure presentational; prompt is controlled by parent
+    const isValidCurrentCombo =
+        !!selectedTrend &&
+        ((selectedTrend.id === "italian-brainrot" && companyContext === "Apple") ||
+            (selectedTrend.id === "ibiza-final-boss" && companyContext === "Nike"));
     return (
         <div className="panel">
             <h2>Select a recent trend</h2>
@@ -202,13 +206,26 @@ function ChooseStep({
                 <div className="brand-grid">
                     {BRANDS.map((b) => {
                         const isSelected = companyContext === b.name;
+                        const allowed =
+                            !!selectedTrend &&
+                            ((selectedTrend.id === "italian-brainrot" && b.id === "apple") ||
+                                (selectedTrend.id === "ibiza-final-boss" && b.id === "nike"));
                         return (
                             <button
                                 type="button"
                                 key={b.id}
-                                className={`brand-card ${isSelected ? "selected" : ""}`}
-                                onClick={() => onUpdateContext(b.name)}
+                                className={`brand-card ${isSelected ? "selected" : ""} ${
+                                    allowed ? "" : "disabled"
+                                }`}
+                                onClick={() => {
+                                    if (!allowed) {
+                                        alert("Please provide an openai API key");
+                                        return;
+                                    }
+                                    onUpdateContext(b.name);
+                                }}
                                 aria-pressed={isSelected}
+                                aria-disabled={!allowed}
                             >
                                 <img
                                     className="brand-logo"
@@ -239,11 +256,7 @@ function ChooseStep({
             </div>
 
             <div className="actions">
-                <button
-                    className="primary"
-                    disabled={!selectedTrend || !companyContext}
-                    onClick={onGenerate}
-                >
+                <button className="primary" disabled={!isValidCurrentCombo} onClick={onGenerate}>
                     Generate Mock Video
                 </button>
             </div>
@@ -997,7 +1010,18 @@ export default function App() {
             {step === "choose" && (
                 <ChooseStep
                     selectedTrend={trend}
-                    onSelectTrend={(t) => setTrend(t)}
+                    onSelectTrend={(t) => {
+                        setTrend(t);
+                        // Clear invalid brand selection when switching trend
+                        setContext((prev) => {
+                            const wasApple = prev === "Apple";
+                            const wasNike = prev === "Nike";
+                            const staysValid =
+                                (t.id === "italian-brainrot" && wasApple) ||
+                                (t.id === "ibiza-final-boss" && wasNike);
+                            return staysValid ? prev : "";
+                        });
+                    }}
                     companyContext={context}
                     onUpdateContext={setContext}
                     prompt={prompt}
