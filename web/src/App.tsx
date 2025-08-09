@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile } from "@ffmpeg/util";
+// Dynamic import helpers to avoid Vite optimize issues in dev
+let loadFFmpeg: (() => Promise<{ FFmpeg: any }>) | null = null;
+let loadFFmpegUtil: (() => Promise<{ fetchFile: any }>) | null = null;
+if (typeof window !== "undefined") {
+    loadFFmpeg = () => import("@ffmpeg/ffmpeg");
+    loadFFmpegUtil = () => import("@ffmpeg/util");
+}
 import "./App.css";
 
-type Step = "choose" | "generating" | "review" | "publish";
+type Step = "choose" | "generating" | "review" | "publish" | "analytics";
 
 type Trend = {
     id: string;
@@ -24,14 +29,14 @@ const TRENDS: Trend[] = [
         id: "italian-brainrot",
         title: "Italian Brainrot",
         description: "Fast-cuts, zooms, meme-y sound bed with over-the-top captions.",
-        defaultHashtags: ["#italianbrainrot", "#meme", "#viral"],
+        defaultHashtags: ["#italianbrainrot", "#brainrot", "#tungtungtung"],
         coverUrl: "/tungtungtungsahur.png",
     },
     {
         id: "ibiza-final-boss",
         title: "Ibiza Final Boss",
         description: "The final boss of the game 'Ibiza'.",
-        defaultHashtags: ["#ibizafinalboss", "#ibizafinalboss2025", "#ibizafinalboss2025live"],
+        defaultHashtags: ["#ibizafinalboss", "#finalboss", "#Ibiza"],
         coverUrl: "/ibizafinalboss.png",
     },
     {
@@ -39,14 +44,14 @@ const TRENDS: Trend[] = [
         title: "Labubu",
         description:
             "Labubu is a cute and funny character from the game 'Hello Kitty's Surprise Party'.",
-        defaultHashtags: ["#labubu", "#labubu2025", "#labubu2025live"],
+        defaultHashtags: ["#labubu", "#gold", "#labubuthemonsters"],
         coverUrl: "/labubu.png",
     },
     {
         id: "ok-garmin",
         title: "Ok Garmin",
         description: "'Ok Garmin' stoppe das video",
-        defaultHashtags: ["#okgarmin", "#okgarminlive", "#okgarminlive2025"],
+        defaultHashtags: ["#garmin", "#okaygarmin", "#okgarmin", "#videospeichern", "#dashcam"],
         coverUrl: "/okgarmin.png",
     },
 ];
@@ -135,6 +140,22 @@ function TrendCard({
             onClick={() => onSelect(trend)}
         >
             <div className="thumb-wrap">
+                {/* Top badges for special trends */}
+                {trend.id === "ibiza-final-boss" && (
+                    <>
+                        <div className="ribbon ribbon-newcomer">Newcomer</div>
+                    </>
+                )}
+                {trend.id === "italian-brainrot" && (
+                    <>
+                        <div className="badge popular flame" aria-label="Most popular flame">
+                            <span className="icon" role="img" aria-hidden>
+                                🔥
+                            </span>
+                        </div>
+                        <div className="ribbon ribbon-popular">Most popular</div>
+                    </>
+                )}
                 <img className="trend-cover" src={trend.coverUrl} alt={trend.title} />
             </div>
             <div className="trend-title">{trend.title}</div>
@@ -149,14 +170,19 @@ function ChooseStep({
     onSelectTrend,
     companyContext,
     onUpdateContext,
+    prompt,
+    onUpdatePrompt,
     onGenerate,
 }: {
     selectedTrend: Trend | null;
     onSelectTrend: (t: Trend) => void;
     companyContext: string;
     onUpdateContext: (val: string) => void;
+    prompt: string;
+    onUpdatePrompt: (val: string) => void;
     onGenerate: () => void;
 }) {
+    // Pure presentational; prompt is controlled by parent
     return (
         <div className="panel">
             <h2>Select a recent trend</h2>
@@ -195,6 +221,21 @@ function ChooseStep({
                         );
                     })}
                 </div>
+            </div>
+            <br></br>
+            {/* Prompt fine-tuning */}
+            <div className="prompt-editor" style={{ marginTop: 16 }}>
+                <h3>Adjust your branding in the video</h3>
+                <textarea
+                    rows={4}
+                    value={prompt}
+                    onChange={(e) => onUpdatePrompt(e.target.value)}
+                    placeholder="Describe how to adapt the meme for your brand..."
+                />
+                <p className="muted" style={{ marginTop: 6 }}>
+                    This description will be integrated in our master-prompt that will be used to
+                    generate the video.
+                </p>
             </div>
 
             <div className="actions">
@@ -257,12 +298,26 @@ function ReviewStep({
     const defaultCaption = `Using ${trend.title} for: ${context || "your brand"}`;
     const [caption, setCaption] = useState<string>(defaultCaption);
     const [hashtagsText, setHashtagsText] = useState<string>(trend.defaultHashtags.join(" "));
+    const media = useMemo(() => {
+        if (trend.id === "ibiza-final-boss") {
+            return {
+                videoSrc: "/ibiza_boss.mp4",
+                audioSrc: "/ibiza_boss.mp3",
+                mergedDownloadName: "merged_ibiza_boss.mp4",
+            } as const;
+        }
+        return {
+            videoSrc: "/apple_tungtung.mp4",
+            audioSrc: "/apple_tungtung.mp3",
+            mergedDownloadName: "merged_apple_tungtung.mp4",
+        } as const;
+    }, [trend.id]);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [audioAttached, setAudioAttached] = useState<boolean>(false);
     const [audioError, setAudioError] = useState<string | null>(null);
     const [audioVolume, setAudioVolume] = useState<number>(1);
-    const ffmpegRef = useRef<FFmpeg | null>(null);
+    const ffmpegRef = useRef<any | null>(null);
     const [merging, setMerging] = useState<boolean>(false);
     const [mergeError, setMergeError] = useState<string | null>(null);
     const [mergedReady, setMergedReady] = useState<boolean>(false);
@@ -334,15 +389,24 @@ function ReviewStep({
         setMerging(true);
         try {
             if (!ffmpegRef.current) {
+                if (!loadFFmpeg || !loadFFmpegUtil) throw new Error("FFmpeg not available");
+                const [{ FFmpeg }, { fetchFile }] = await Promise.all([
+                    loadFFmpeg(),
+                    loadFFmpegUtil(),
+                ]);
                 ffmpegRef.current = new FFmpeg();
+                // Use default loader; can also provide core/wasm URLs via load({ coreURL, wasmURL })
                 await ffmpegRef.current.load();
+                // Cache fetchFile on the instance for reuse
+                (ffmpegRef.current as any)._fetchFile = fetchFile;
             }
             const ffmpeg = ffmpegRef.current;
             if (!ffmpeg) throw new Error("FFmpeg init failed");
 
             // Write inputs
-            await ffmpeg.writeFile("input.mp4", await fetchFile("/apple_tungtung.mp4"));
-            await ffmpeg.writeFile("input.mp3", await fetchFile("/apple_tungtung.mp3"));
+            const fetchFile = (ffmpeg as any)._fetchFile as (x: any) => Promise<Uint8Array>;
+            await ffmpeg.writeFile("input.mp4", await fetchFile(media.videoSrc));
+            await ffmpeg.writeFile("input.mp3", await fetchFile(media.audioSrc));
 
             // Mux audio onto video (copy video, re-encode audio to AAC), stop at shortest
             await ffmpeg.exec([
@@ -389,7 +453,7 @@ function ReviewStep({
             <div className="review">
                 <video
                     ref={videoRef}
-                    src="/apple_tungtung.mp4"
+                    src={media.videoSrc}
                     controls
                     width={300}
                     height={534}
@@ -398,9 +462,9 @@ function ReviewStep({
                 {/* Hidden audio element that will be played in sync with the video when attached */}
                 <audio
                     ref={audioRef}
-                    src="/apple_tungtung.mp3"
+                    src={media.audioSrc}
                     preload="auto"
-                    onError={() => setAudioError("Could not load /apple_tungtung.mp3")}
+                    onError={() => setAudioError(`Could not load ${media.audioSrc}`)}
                     style={{ display: "none" }}
                 />
                 <div className="meta">
@@ -512,15 +576,18 @@ function PublishStep({
     hashtags,
     mergedUrl,
     onRestart,
+    onAllDone,
 }: {
     caption: string;
     hashtags: string[];
     mergedUrl: string | null;
     onRestart: () => void;
+    onAllDone: () => void;
 }) {
     const [targets, setTargets] = useState<string[]>(["tiktok"]);
     const [statusMap, setStatusMap] = useState<Record<string, PublishStatus>>({});
     const [started, setStarted] = useState(false);
+    const notifiedRef = useRef(false);
 
     const startUploadFor = (platform: string, delayBase = 900) => {
         setStatusMap((m) => ({ ...m, [platform]: "uploading" }));
@@ -549,6 +616,15 @@ function PublishStep({
     };
 
     const allDone = targets.length > 0 && targets.every((t) => statusMap[t] === "done");
+
+    useEffect(() => {
+        if (allDone && !notifiedRef.current) {
+            notifiedRef.current = true;
+            // small delay to let the UI show the final "Uploaded ✓" state
+            const t = setTimeout(() => onAllDone(), 600);
+            return () => clearTimeout(t);
+        }
+    }, [allDone, onAllDone]);
 
     return (
         <div className="panel">
@@ -597,11 +673,7 @@ function PublishStep({
                         <div className="caption-box">
                             <div className="label">Merged Video</div>
                             <div className="value">
-                                <a
-                                    className="button"
-                                    href={mergedUrl}
-                                    download="merged_apple_tungtung.mp4"
-                                >
+                                <a className="button" href={mergedUrl} download>
                                     Download merged video
                                 </a>
                             </div>
@@ -646,30 +718,281 @@ export default function App() {
     const [step, setStep] = useState<Step>("choose");
     const [trend, setTrend] = useState<Trend | null>(null);
     const [context, setContext] = useState<string>("");
+    const buildPrompt = (trend: Trend | null, brand: string) => {
+        const brandName = brand || "your brand";
+        if (!trend) {
+            return `Create a short, catchy vertical video concept for ${brandName} using a trending meme. Keep it fast-paced with bold captions and include 3-5 relevant hashtags.`;
+        }
+        const tagLine = trend.defaultHashtags.join(" ");
+        return `Create a 15-25s vertical video for ${brandName} using the "${trend.title}" meme. Style: ${trend.description} Captions should be bold and punchy. Include on-screen callout to ${brandName}. Keep it authentic, playful, and shareable. Hashtags: ${tagLine}.`;
+    };
+    const [prompt, setPrompt] = useState<string>(buildPrompt(trend, context));
     const [caption, setCaption] = useState<string>("");
     const [hashtags, setHashtags] = useState<string[]>([]);
     const [mergedUrl, setMergedUrl] = useState<string | null>(null);
+    const [newlyPostedId, setNewlyPostedId] = useState<string | null>(null);
+
+    type AnalyticsPost = {
+        id: string;
+        caption: string;
+        hashtags: string[];
+        coverUrl: string; // image preview
+        mediaUrl?: string; // optional video url
+        platform: string;
+        createdAt: string; // ISO
+        views: number;
+        likes: number;
+        comments: { id: string; author: string; text: string }[];
+    };
+
+    const [feedItems, setFeedItems] = useState<AnalyticsPost[]>(() => [
+        {
+            id: "p1",
+            caption: "POV: You’re the final boss landing in Ibiza ✈️",
+            hashtags: ["#ibizafinalboss", "#finalboss", "#Ibiza"],
+            coverUrl: "/ibizafinalboss.png",
+            platform: "tiktok",
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+            views: 128_400,
+            likes: 9_240,
+            comments: [
+                { id: "c1", author: "@maria", text: "This trend still hits 😂" },
+                { id: "c2", author: "@leo", text: "Final boss energy fr" },
+            ],
+        },
+        {
+            id: "p2",
+            caption: "Labubu goes gold for Q1 wins",
+            hashtags: ["#labubu", "#gold", "#labubuthemonsters"],
+            coverUrl: "/labubu.png",
+            platform: "instagram",
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
+            views: 64_900,
+            likes: 4_310,
+            comments: [
+                { id: "c3", author: "@soph", text: "So cute omg" },
+                { id: "c4", author: "@kim", text: "Where can I get this?!" },
+            ],
+        },
+        {
+            id: "p3",
+            caption: "‘Ok Garmin’ but make it retail checkout",
+            hashtags: ["#garmin", "#okgarmin", "#dashcam"],
+            coverUrl: "/okgarmin.png",
+            platform: "youtube",
+            createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+            views: 42_120,
+            likes: 2_640,
+            comments: [{ id: "c5", author: "@jules", text: "LMFAO the cut at 0:05" }],
+        },
+    ]);
+
+    // Sync prompt when the selected trend or brand changes, unless user already edited
+    useEffect(() => {
+        setPrompt(buildPrompt(trend, context));
+    }, [trend, context]);
 
     const goBack = () => {
+        if (!ORDER.includes(step)) return; // no-op outside pipeline
         const currentIdx = ORDER.indexOf(step);
         const prev = ORDER[Math.max(0, currentIdx - 1)];
         setStep(prev);
     };
 
+    const handlePublishAllDone = () => {
+        // Create a new mock post from current session
+        const id = `new_${Date.now()}`;
+        const coverUrl = trend?.coverUrl ?? "/tungtungtungsahur.png";
+        const platform = "tiktok";
+        const createdAt = new Date().toISOString();
+        const captionToUse =
+            caption ||
+            (trend ? `Using ${trend.title} for ${context || "your brand"}` : "New meme post");
+        const hashtagsToUse = hashtags.length ? hashtags : trend?.defaultHashtags ?? [];
+        const views = 48 + Math.floor(Math.random() * 2_800);
+        const likes = Math.floor(views * (0.06 + Math.random() * 0.004));
+        const comments = [
+            { id: `cm_${id}_1`, author: "@alex", text: "Already seeing this everywhere 🔥" },
+            { id: `cm_${id}_2`, author: "@tay", text: "Algorithm picked it up quick" },
+        ];
+        const newItem: AnalyticsPost = {
+            id,
+            caption: captionToUse,
+            hashtags: hashtagsToUse,
+            coverUrl,
+            mediaUrl:
+                mergedUrl ??
+                (trend?.id === "ibiza-final-boss" ? "/ibiza_boss.mp4" : "/apple_tungtung.mp4"),
+            platform,
+            createdAt,
+            views,
+            likes,
+            comments,
+        };
+        setFeedItems((prev) => [newItem, ...prev]);
+        setNewlyPostedId(id);
+        // Do not auto-navigate; user can open analytics from header
+    };
+
+    function AnalyticsStep({
+        items,
+        highlightId,
+        onCreateAnother,
+    }: {
+        items: typeof feedItems;
+        highlightId: string | null;
+        onCreateAnother: () => void;
+    }) {
+        const totalViews = items.reduce((sum, p) => sum + p.views, 0);
+        const totalLikes = items.reduce((sum, p) => sum + p.likes, 0);
+        const totalComments = items.reduce((sum, p) => sum + p.comments.length, 0);
+
+        // Simple 7-day sparkline data (mock)
+        const last7 = Array.from(
+            { length: 7 },
+            (_, i) => 200 + Math.round(Math.sin(i / 2) * 80 + Math.random() * 100)
+        );
+        const max7 = Math.max(...last7);
+        const points = last7
+            .map((v, i) => {
+                const x = (i / 6) * 260;
+                const y = 80 - (v / max7) * 80;
+                return `${x},${y}`;
+            })
+            .join(" ");
+
+        // Aggregate likes by platform to avoid duplicate platform rows
+        const platformToLikes = items.reduce<Record<string, number>>((acc, p) => {
+            acc[p.platform] = (acc[p.platform] ?? 0) + p.likes;
+            return acc;
+        }, {});
+        const platformRows = Object.entries(platformToLikes);
+        const maxLikes = Math.max(...platformRows.map(([, v]) => v));
+
+        return (
+            <div className="panel analytics">
+                {/* Left: Recent posts */}
+                <div className="analytics-left">
+                    <div className="list-header">
+                        <h3>Recent posts</h3>
+                        <button onClick={onCreateAnother}>Create another</button>
+                    </div>
+                    <div className="feed-list">
+                        {items.map((p) => (
+                            <div
+                                key={p.id}
+                                className={`feed-item ${p.id === highlightId ? "new" : ""}`}
+                            >
+                                <div className="media">
+                                    <img src={p.coverUrl} alt="cover" />
+                                    {p.id === highlightId && <span className="pill">New</span>}
+                                </div>
+                                <div className="content">
+                                    <div className="cap">{p.caption}</div>
+                                    <div className="hash">{p.hashtags.join(" ")}</div>
+                                    <div className="nums">
+                                        <span>👁️ {p.views.toLocaleString()}</span>
+                                        <span>❤️ {p.likes.toLocaleString()}</span>
+                                        <span>💬 {p.comments.length}</span>
+                                    </div>
+                                    {p.comments[0] && (
+                                        <div className="comment">
+                                            <span className="author">{p.comments[0].author}</span>{" "}
+                                            {p.comments[0].text}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Right: Charts */}
+                <div className="analytics-right">
+                    <h2>Performance analytics</h2>
+                    <div className="stat-cards">
+                        <div className="stat-card">
+                            <div className="label">Total views</div>
+                            <div className="value">{totalViews.toLocaleString()}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="label">Total likes</div>
+                            <div className="value">{totalLikes.toLocaleString()}</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="label">Comments</div>
+                            <div className="value">{totalComments.toLocaleString()}</div>
+                        </div>
+                    </div>
+                    <div className="charts">
+                        <div className="chart-card">
+                            <div className="chart-title">Views, last 7d</div>
+                            <svg viewBox="0 0 260 100" className="chart" aria-label="Views">
+                                <polyline
+                                    fill="none"
+                                    stroke="#646cff"
+                                    strokeWidth="2"
+                                    points={points}
+                                />
+                                {last7.map((v, i) => {
+                                    const x = (i / 6) * 260;
+                                    const y = 80 - (v / max7) * 80;
+                                    return <circle key={i} cx={x} cy={y} r={2.2} fill="#9aa0ff" />;
+                                })}
+                            </svg>
+                        </div>
+                        <div className="chart-card">
+                            <div className="chart-title">Likes by platform</div>
+                            <div className="bars">
+                                {platformRows.map(([platform, likeCount]) => {
+                                    const pct = Math.min(
+                                        100,
+                                        Math.round((likeCount / (maxLikes || 1)) * 100)
+                                    );
+                                    return (
+                                        <div key={platform} className="bar-row">
+                                            <div className="bar-label">{platform}</div>
+                                            <div className="bar-track">
+                                                <div
+                                                    className="bar-fill"
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                            </div>
+                                            <div className="bar-value">
+                                                {likeCount.toLocaleString()}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="container full">
             <header className="app-header glass">
                 <div className="left">
-                    {step !== "choose" && (
+                    {ORDER.includes(step) && step !== "choose" && (
                         <button className="ghost back" onClick={goBack}>
                             ← Back
                         </button>
                     )}
-                    <div className="brand">Keep up with the trends</div>
+                    <div className="brand">Trendify: Keep up with the Memes</div>
+                </div>
+                <div className="links">
+                    {step !== "analytics" ? (
+                        <button onClick={() => setStep("analytics")}>View analytics</button>
+                    ) : (
+                        <button onClick={() => setStep("choose")}>Close analytics</button>
+                    )}
                 </div>
             </header>
 
-            <StepIndicator step={step} onNavigate={setStep} />
+            {ORDER.includes(step) && <StepIndicator step={step} onNavigate={setStep} />}
 
             {step === "choose" && (
                 <ChooseStep
@@ -677,6 +1000,8 @@ export default function App() {
                     onSelectTrend={(t) => setTrend(t)}
                     companyContext={context}
                     onUpdateContext={setContext}
+                    prompt={prompt}
+                    onUpdatePrompt={setPrompt}
                     onGenerate={() => {
                         setStep("generating");
                     }}
@@ -719,8 +1044,28 @@ export default function App() {
                         setCaption("");
                         setHashtags([]);
                         setContext("");
+                        setPrompt(buildPrompt(null, ""));
                         if (mergedUrl) URL.revokeObjectURL(mergedUrl);
                         setMergedUrl(null);
+                        setStep("choose");
+                    }}
+                    onAllDone={handlePublishAllDone}
+                />
+            )}
+
+            {step === "analytics" && (
+                <AnalyticsStep
+                    items={feedItems}
+                    highlightId={newlyPostedId}
+                    onCreateAnother={() => {
+                        setTrend(null);
+                        setCaption("");
+                        setHashtags([]);
+                        setContext("");
+                        setPrompt(buildPrompt(null, ""));
+                        if (mergedUrl) URL.revokeObjectURL(mergedUrl);
+                        setMergedUrl(null);
+                        setNewlyPostedId(null);
                         setStep("choose");
                     }}
                 />
