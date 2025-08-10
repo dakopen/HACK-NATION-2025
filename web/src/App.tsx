@@ -28,14 +28,16 @@ const TRENDS: Trend[] = [
     {
         id: "italian-brainrot",
         title: "Italian Brainrot",
-        description: "Fast-cuts, zooms, meme-y sound bed with over-the-top captions.",
+        description:
+            "A meme trend characterized by absurd, AI-generated creatures with nonsensical Italian-sounding names and narratives, typically accompanied Italian-accented voiceovers.",
         defaultHashtags: ["#italianbrainrot", "#brainrot", "#tungtungtung"],
         coverUrl: "/tungtungtungsahur.png",
     },
     {
         id: "ibiza-final-boss",
         title: "Ibiza Final Boss",
-        description: "The final boss of the game 'Ibiza'.",
+        description:
+            "The Ibiza final boss: the typical Englishman flying Ryanair to ibiza and partying like it's his life's calling.",
         defaultHashtags: ["#ibizafinalboss", "#finalboss", "#Ibiza"],
         coverUrl: "/ibizafinalboss.png",
     },
@@ -43,14 +45,15 @@ const TRENDS: Trend[] = [
         id: "labubu",
         title: "Labubu",
         description:
-            "Labubu is a cute and funny character from the game 'Hello Kitty's Surprise Party'.",
+            "A Labubu, a little plush toy that looks cute and sinister at the same time, yet for some reason everybody wants one.",
         defaultHashtags: ["#labubu", "#gold", "#labubuthemonsters"],
         coverUrl: "/labubu.png",
     },
     {
         id: "ok-garmin",
         title: "Ok Garmin",
-        description: "'Ok Garmin' stoppe das video",
+        description:
+            "Near collision? Scream “Ok Garmin, video speichern” and you'll become famous.",
         defaultHashtags: ["#garmin", "#okaygarmin", "#okgarmin", "#videospeichern", "#dashcam"],
         coverUrl: "/okgarmin.png",
     },
@@ -1117,7 +1120,7 @@ export default function App() {
             )}
 
             <footer className="app-footer">
-                Built for Hack Nation 2025 • Mock demo – no external uploads
+                Built for Hack Nation 2025 • Mock demo - no external uploads
             </footer>
         </div>
     );
