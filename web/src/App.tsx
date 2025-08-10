@@ -87,6 +87,26 @@ const BRANDS: Brand[] = [
     },
 ];
 
+// Generate default caption text based on selected trend and brand context
+function getDefaultCaptionFor(trend: Trend, brandName: string): string {
+    const brand = (brandName || "").trim();
+    switch (trend.id) {
+        case "italian-brainrot":
+            if (brand === "Apple" || brand === "OpenAI") return "We got a new friend";
+            break;
+        case "ok-garmin":
+            if (brand === "Tesla") return "Activate the autopilot anytime";
+            break;
+        case "ibiza-final-boss":
+            if (brand === "Nike") return "Even the Ibiza final boss is waring Nike";
+            break;
+        case "labubu":
+            if (brand === "Starbucks") return "All the Labubus love our coffee☕";
+            break;
+    }
+    return `Using ${trend.title} for: ${brand || "your brand"}`;
+}
+
 const ORDER: Step[] = ["choose", "generating", "review", "publish"];
 
 function StepIndicator({ step, onNavigate }: { step: Step; onNavigate: (s: Step) => void }) {
@@ -189,7 +209,9 @@ function ChooseStep({
     const isValidCurrentCombo =
         !!selectedTrend &&
         ((selectedTrend.id === "italian-brainrot" && companyContext === "Apple") ||
-            (selectedTrend.id === "ibiza-final-boss" && companyContext === "Nike"));
+            (selectedTrend.id === "ibiza-final-boss" && companyContext === "Nike") ||
+            (selectedTrend.id === "ok-garmin" && companyContext === "Tesla") ||
+            (selectedTrend.id === "labubu" && companyContext === "Starbucks"));
     return (
         <div className="panel">
             <h2>Select a recent trend</h2>
@@ -212,7 +234,9 @@ function ChooseStep({
                         const allowed =
                             !!selectedTrend &&
                             ((selectedTrend.id === "italian-brainrot" && b.id === "apple") ||
-                                (selectedTrend.id === "ibiza-final-boss" && b.id === "nike"));
+                                (selectedTrend.id === "ibiza-final-boss" && b.id === "nike") ||
+                                (selectedTrend.id === "ok-garmin" && b.id === "tesla") ||
+                                (selectedTrend.id === "labubu" && b.id === "starbucks"));
                         return (
                             <button
                                 type="button"
@@ -222,7 +246,9 @@ function ChooseStep({
                                 }`}
                                 onClick={() => {
                                     if (!allowed) {
-                                        alert("Please provide an openai API key");
+                                        alert(
+                                            "The backend is currently mocked due to unavailable API credits for the models."
+                                        );
                                         return;
                                     }
                                     onUpdateContext(b.name);
@@ -311,7 +337,7 @@ function ReviewStep({
     onContinue: (caption: string, hashtags: string[]) => void;
     onMerged: (url: string) => void;
 }) {
-    const defaultCaption = `Using ${trend.title} for: ${context || "your brand"}`;
+    const defaultCaption = getDefaultCaptionFor(trend, context);
     const [caption, setCaption] = useState<string>(defaultCaption);
     const [hashtagsText, setHashtagsText] = useState<string>(trend.defaultHashtags.join(" "));
     const media = useMemo(() => {
@@ -320,6 +346,20 @@ function ReviewStep({
                 videoSrc: "/ibiza_boss.mp4",
                 audioSrc: "/ibiza_boss.mp3",
                 mergedDownloadName: "merged_ibiza_boss.mp4",
+            } as const;
+        }
+        if (trend.id === "ok-garmin") {
+            return {
+                videoSrc: "/tesla_okgarmin.mp4",
+                audioSrc: "/tesla_okgarmin.mp3",
+                mergedDownloadName: "merged_tesla_okgarmin.mp4",
+            } as const;
+        }
+        if (trend.id === "labubu") {
+            return {
+                videoSrc: "/starbucks_labubu.mp4",
+                audioSrc: null,
+                mergedDownloadName: "merged_starbucks_labubu.mp4",
             } as const;
         }
         return {
@@ -476,13 +516,15 @@ function ReviewStep({
                     style={{ background: "#000", borderRadius: 12 }}
                 />
                 {/* Hidden audio element that will be played in sync with the video when attached */}
-                <audio
-                    ref={audioRef}
-                    src={media.audioSrc}
-                    preload="auto"
-                    onError={() => setAudioError(`Could not load ${media.audioSrc}`)}
-                    style={{ display: "none" }}
-                />
+                {media.audioSrc && (
+                    <audio
+                        ref={audioRef}
+                        src={media.audioSrc}
+                        preload="auto"
+                        onError={() => setAudioError(`Could not load ${media.audioSrc}`)}
+                        style={{ display: "none" }}
+                    />
+                )}
                 <div className="meta">
                     <label>Caption</label>
                     <textarea
@@ -496,7 +538,8 @@ function ReviewStep({
                         <label>
                             <input
                                 type="checkbox"
-                                checked={audioAttached}
+                                disabled={!media.audioSrc}
+                                checked={!!media.audioSrc && audioAttached}
                                 onChange={(e) => {
                                     setAudioError(null);
                                     setAudioAttached(e.target.checked);
@@ -514,7 +557,7 @@ function ReviewStep({
                             />
                         </label>
                     </div>
-                    {audioAttached && (
+                    {media.audioSrc && audioAttached && (
                         <div
                             className="box"
                             role="region"
@@ -761,7 +804,7 @@ export default function App() {
             return `Create a short, catchy vertical video concept for ${brandName} using a trending meme. Keep it fast-paced with bold captions and include 3-5 relevant hashtags.`;
         }
         const tagLine = trend.defaultHashtags.join(" ");
-        return `Create a 15-25s vertical video for ${brandName} using the "${trend.title}" meme. Style: ${trend.description} Captions should be bold and punchy. Include on-screen callout to ${brandName}. Keep it authentic, playful, and shareable. Hashtags: ${tagLine}.`;
+        return `Create a short vertical video for ${brandName} using the "${trend.title}" meme. Style: ${trend.description} Captions should be bold and punchy. Include on-screen callout to ${brandName}. Keep it authentic, playful, and shareable. Hashtags: ${tagLine}.`;
     };
     const [prompt, setPrompt] = useState<string>(buildPrompt(trend, context));
     const [caption, setCaption] = useState<string>("");
@@ -859,7 +902,13 @@ export default function App() {
             coverUrl,
             mediaUrl:
                 mergedUrl ??
-                (trend?.id === "ibiza-final-boss" ? "/ibiza_boss.mp4" : "/apple_tungtung.mp4"),
+                (trend?.id === "ibiza-final-boss"
+                    ? "/ibiza_boss.mp4"
+                    : trend?.id === "ok-garmin"
+                    ? "/tesla_okgarmin.mp4"
+                    : trend?.id === "labubu"
+                    ? "/starbucks_labubu.mp4"
+                    : "/apple_tungtung.mp4"),
             platform,
             createdAt,
             views,
@@ -1040,9 +1089,13 @@ export default function App() {
                         setContext((prev) => {
                             const wasApple = prev === "Apple";
                             const wasNike = prev === "Nike";
+                            const wasTesla = prev === "Tesla";
+                            const wasStarbucks = prev === "Starbucks";
                             const staysValid =
                                 (t.id === "italian-brainrot" && wasApple) ||
-                                (t.id === "ibiza-final-boss" && wasNike);
+                                (t.id === "ibiza-final-boss" && wasNike) ||
+                                (t.id === "ok-garmin" && wasTesla) ||
+                                (t.id === "labubu" && wasStarbucks);
                             return staysValid ? prev : "";
                         });
                     }}
