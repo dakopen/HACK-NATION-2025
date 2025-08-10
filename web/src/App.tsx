@@ -499,7 +499,16 @@ function ReviewStep({
                                     setAudioAttached(e.target.checked);
                                 }}
                             />{" "}
-                            Add audio via ElevenLabs
+                            Add audio via{" "}
+                            <img
+                                src="https://11labs-nonprd-15f22c1d.s3.eu-west-3.amazonaws.com/0b9cd3e1-9fad-4a5b-b3a0-c96b0a1f1d2b/elevenlabs-logo-white.png"
+                                alt="ElevenLabs"
+                                style={{
+                                    height: 14,
+                                    verticalAlign: "text-bottom",
+                                    transform: "translateY(-1px)",
+                                }}
+                            />
                         </label>
                     </div>
                     {audioAttached && (
@@ -515,7 +524,19 @@ function ReviewStep({
                                 background: "var(--surface, rgba(255,255,255,0.02))",
                             }}
                         >
-                            <div className="muted">Audio attached via ElevenLabs ✓</div>
+                            <div className="muted">
+                                Audio attached via{" "}
+                                <img
+                                    src="https://11labs-nonprd-15f22c1d.s3.eu-west-3.amazonaws.com/0b9cd3e1-9fad-4a5b-b3a0-c96b0a1f1d2b/elevenlabs-logo-white.png"
+                                    alt="ElevenLabs"
+                                    style={{
+                                        height: 12,
+                                        verticalAlign: "text-bottom",
+                                        transform: "translateY(-1px)",
+                                    }}
+                                />{" "}
+                                ✓
+                            </div>
                             <div
                                 style={{
                                     display: "flex",
